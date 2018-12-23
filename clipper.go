@@ -385,7 +385,7 @@ func (in *IntersectNode) String() string {
 type IntersectNodeList []*IntersectNode
 
 func (i IntersectNodeList) Len() int           { return len(i) }
-func (i IntersectNodeList) Less(a, b int) bool { return i[a].Pt.Y < i[b].Pt.Y }
+func (i IntersectNodeList) Less(a, b int) bool { return i[a].Pt.Y > i[b].Pt.Y }
 func (i IntersectNodeList) Swap(a, b int)      { i[a], i[b] = i[b], i[a] }
 
 //  class MyIntersectNodeSort : IComparer<IntersectNode>
@@ -525,7 +525,7 @@ func (c *ClipperBase) PointIsVertex(pt *IntPoint, pp *OutPt) bool {
 //------------------------------------------------------------------------------
 
 func (c *ClipperBase) PointOnLineSegment(pt,
-	linePt1, linePt2 *IntPoint, UseFullRange bool) bool {
+linePt1, linePt2 *IntPoint, UseFullRange bool) bool {
 	if UseFullRange {
 		return ((pt.X == linePt1.X) && (pt.Y == linePt1.Y)) ||
 			((pt.X == linePt2.X) && (pt.Y == linePt2.Y)) ||
@@ -574,7 +574,7 @@ func (c *ClipperBase) SlopesEqual(e1, e2 *TEdge, UseFullRange bool) bool {
 //------------------------------------------------------------------------------
 
 func (c *ClipperBase) SlopesEqual3(pt1, pt2,
-	pt3 *IntPoint, UseFullRange bool) bool {
+pt3 *IntPoint, UseFullRange bool) bool {
 	if UseFullRange {
 		return Int128Mul(pt1.Y-pt2.Y, pt2.X-pt3.X).Cmp(
 			Int128Mul(pt1.X-pt2.X, pt2.Y-pt3.Y)) == 0
@@ -587,7 +587,7 @@ func (c *ClipperBase) SlopesEqual3(pt1, pt2,
 //------------------------------------------------------------------------------
 
 func (c *ClipperBase) SlopesEqual4(pt1, pt2,
-	pt3, pt4 *IntPoint, UseFullRange bool) bool {
+pt3, pt4 *IntPoint, UseFullRange bool) bool {
 	if UseFullRange {
 		return Int128Mul(pt1.Y-pt2.Y, pt3.X-pt4.X).Cmp(
 			Int128Mul(pt1.X-pt2.X, pt3.Y-pt4.Y)) == 0
@@ -2161,7 +2161,7 @@ func (c *Clipper) GetBottomPt(pp *OutPt) *OutPt {
 				pp = dups
 			}
 			dups = dups.Next
-			for dups.Pt != pp.Pt {
+			for dups.Pt.NotEqual(pp.Pt) {
 				dups = dups.Next
 			}
 		}
@@ -2995,11 +2995,18 @@ func (c *Clipper) ProcessIntersectList() {
 //------------------------------------------------------------------------------
 
 func Round(value float64) CInt {
-	if value < 0 {
-		return CInt(value - 0.5)
-	} else {
-		return CInt(value + 0.5)
+	intPart, fracPart := math.Modf(value)
+	if math.Abs(fracPart) < 0.5 || math.Abs(fracPart) > 0.5 {
+		return CInt(math.Round(value))
 	}
+
+	asInt := CInt(intPart)
+
+	if asInt%2 == 0 {
+		return asInt
+	}
+
+	return asInt + 1
 }
 
 //------------------------------------------------------------------------------
@@ -4115,7 +4122,7 @@ func (c *Clipper) DistanceFromLineSqrd(pt, ln1, ln2 *IntPoint) float64 {
 //---------------------------------------------------------------------------
 
 func (c *Clipper) SlopesNearCollinear(pt1,
-	pt2, pt3 *IntPoint, distSqrd float64) bool {
+pt2, pt3 *IntPoint, distSqrd float64) bool {
 	return c.DistanceFromLineSqrd(pt2, pt1, pt3) < distSqrd
 }
 
@@ -4394,11 +4401,18 @@ func (co *ClipperOffset) Clear() {
 //------------------------------------------------------------------------------
 
 func (co *ClipperOffset) Round(value float64) CInt {
-	if value < 0 {
-		return CInt(value - 0.5)
-	} else {
-		return CInt(value + 0.5)
+	intPart, fracPart := math.Modf(value)
+	if math.Abs(fracPart) < 0.5 || math.Abs(fracPart) > 0.5 {
+		return CInt(math.Round(value))
 	}
+
+	asInt := CInt(intPart)
+
+	if asInt%2 == 0 {
+		return asInt
+	}
+
+	return asInt + 1
 }
 
 //------------------------------------------------------------------------------
