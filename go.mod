@@ -1,4 +1,4 @@
-module github.com/rpaloschi/go.clipper
+module github.com/ronaldpaloschi/go.clipper
 
 go 1.21.2
 
