@@ -51,11 +51,11 @@ import (
 	"strings"
 )
 
-type Path []*IntPoint
+type Path []IntPoint
 type Paths []Path
 
 func NewPath() Path {
-	return Path(make([]*IntPoint, 0))
+	return Path(make([]IntPoint, 0))
 }
 func NewPaths() Paths {
 	return Paths(make([]Path, 0))
@@ -481,14 +481,14 @@ const (
 type ClipperBase struct {
 	m_MinimaList                   *LocalMinima
 	m_CurrentLM                    *LocalMinima
-	m_edges                        [][]*TEdge
+	m_edges                        [][]TEdge
 	m_UseFullRange, m_HasOpenPaths bool
 	PreserveCollinear              bool
 }
 
 func NewClipperBase() *ClipperBase {
 	c := new(ClipperBase)
-	c.m_edges = make([][]*TEdge, 0)
+	c.m_edges = make([][]TEdge, 0)
 	return c
 }
 
@@ -561,6 +561,7 @@ func (c *ClipperBase) PointOnPolygon(pt *IntPoint, pp *OutPt, UseFullRange bool)
 
 //------------------------------------------------------------------------------
 
+
 func (c *ClipperBase) SlopesEqual(e1, e2 *TEdge, UseFullRange bool) bool {
 	if UseFullRange {
 		return Int128Mul(e1.Delta.Y, e2.Delta.X).Cmp(
@@ -600,7 +601,7 @@ pt3, pt4 *IntPoint, UseFullRange bool) bool {
 //------------------------------------------------------------------------------
 
 func (c *ClipperBase) Clear() {
-	c.m_edges = make([][]*TEdge, 0)
+	c.m_edges = make([][]TEdge, 0)
 	c.m_UseFullRange = false
 	c.m_HasOpenPaths = false
 }
@@ -619,14 +620,14 @@ func (c *ClipperBase) DisposeLocalMinimaList() {
 //------------------------------------------------------------------------------
 
 func (c *ClipperBase) RangeTest(Pt *IntPoint, useFullRange *bool) {
-	if *useFullRange {
+/*	if *useFullRange {
 		if Pt.X > hiRange || Pt.Y > hiRange || -Pt.X > hiRange || -Pt.Y > hiRange {
 			panic(NewClipperException("Coordinate outside allowed range"))
 		} else if Pt.X > loRange || Pt.Y > loRange || -Pt.X > loRange || -Pt.Y > loRange {
 			*useFullRange = true
 			c.RangeTest(Pt, useFullRange)
 		}
-	}
+	}*/
 }
 
 //------------------------------------------------------------------------------
@@ -840,24 +841,24 @@ func (c *ClipperBase) AddPath(pg Path, polyType PolyType, Closed bool) bool {
 	}
 
 	//create a new edge array ...
-	edges := make([]*TEdge, highI+1)
-	for i := 0; i <= highI; i++ {
+	edges := make([]TEdge, highI+1)
+	/*for i := 0; i <= highI; i++ {
 		edges[i] = new(TEdge)
-	}
+	}*/
 
 	IsFlat := true
 
 	//1. Basic (first) edge initialization ...
 	edges[1].Curr = pg[1].Copy()
-	c.RangeTest(pg[0], &c.m_UseFullRange)
-	c.RangeTest(pg[highI], &c.m_UseFullRange)
-	c.InitEdge(edges[0], edges[1], edges[highI], pg[0])
-	c.InitEdge(edges[highI], edges[0], edges[highI-1], pg[highI])
+	c.RangeTest(&pg[0], &c.m_UseFullRange)
+	c.RangeTest(&pg[highI], &c.m_UseFullRange)
+	c.InitEdge(&edges[0], &edges[1], &edges[highI], &pg[0])
+	c.InitEdge(&edges[highI], &edges[0], &edges[highI-1], &pg[highI])
 	for i := highI - 1; i >= 1; i-- {
-		c.RangeTest(pg[i], &c.m_UseFullRange)
-		c.InitEdge(edges[i], edges[i+1], edges[i-1], pg[i])
+		c.RangeTest(&pg[i], &c.m_UseFullRange)
+		c.InitEdge(&edges[i], &edges[i+1], &edges[i-1], &pg[i])
 	}
-	eStart := edges[0]
+	eStart := &edges[0]
 
 	//2. Remove duplicate vertices, and (when closed) collinear edges ...
 	E := eStart
@@ -1176,7 +1177,7 @@ type Clipper struct {
 
 func NewClipper(initOptions InitOptions) *Clipper {
 	c := new(Clipper)
-	c.m_edges = make([][]*TEdge, 0)
+	c.m_edges = make([][]TEdge, 0)
 	c.m_Scanbeam = nil
 	c.m_ActiveEdges = nil
 	c.m_SortedEdges = nil
@@ -3272,9 +3273,9 @@ func (c *Clipper) BuildResult() Paths {
 		if cnt < 2 {
 			continue
 		}
-		pg := Path(make([]*IntPoint, 0, cnt))
+		pg := Path(make([]IntPoint, 0, cnt))
 		for j := 0; j < cnt; j++ {
-			pg = append(pg, p.Pt)
+			pg = append(pg, *p.Pt)
 			p = p.Prev
 		}
 		polyg = append(polyg, pg)
@@ -3300,10 +3301,10 @@ func (c *Clipper) BuildResult2(polytree *PolyTree) {
 		pn := new(PolyNode)
 		polytree.m_AllPolys[i] = pn
 		outRec.PolyNode = pn
-		pn.m_polygon = make([]*IntPoint, cnt)
+		pn.m_polygon = make([]IntPoint, cnt)
 		op := outRec.Pts.Prev
 		for j := 0; j < cnt; j++ {
-			pn.m_polygon[j] = op.Pt
+			pn.m_polygon[j] = *op.Pt
 			op = op.Prev
 		}
 	}
@@ -3692,9 +3693,9 @@ func PointInPolygon(pt *IntPoint, path Path) int {
 	for i := 1; i <= cnt; i++ {
 		var ipNext *IntPoint
 		if i == cnt {
-			ipNext = path[0]
+			ipNext = &path[0]
 		} else {
-			ipNext = path[i]
+			ipNext = &path[i]
 		}
 		if ipNext.Y == pt.Y {
 			if (ipNext.X == pt.X) || (ip.Y == pt.Y &&
@@ -3727,7 +3728,7 @@ func PointInPolygon(pt *IntPoint, path Path) int {
 				}
 			}
 		}
-		ip = ipNext
+		ip = *ipNext
 	}
 	return result
 }
@@ -4164,7 +4165,7 @@ func (c *Clipper) CleanPolygon(path Path, distance float64) Path {
 	}
 
 	for i := 0; i < cnt; i++ {
-		outPts[i].Pt = path[i]
+		outPts[i].Pt = &path[i]
 		outPts[i].Next = outPts[(i+1)%cnt]
 		outPts[i].Next.Prev = outPts[i]
 		outPts[i].Idx = 0
@@ -4192,9 +4193,9 @@ func (c *Clipper) CleanPolygon(path Path, distance float64) Path {
 	if cnt < 3 {
 		cnt = 0
 	}
-	result := Path(make([]*IntPoint, cnt))
+	result := Path(make([]IntPoint, cnt))
 	for i := 0; i < cnt; i++ {
-		result[i] = op.Pt
+		result[i] = *op.Pt
 		op = op.Next
 	}
 	outPts = nil
@@ -4226,16 +4227,18 @@ func (c *Clipper) Minkowski(pattern, path Path, IsSum, IsClosed bool) Paths {
 	result := Paths(make([]Path, pathCnt))
 	if IsSum {
 		for i := 0; i < pathCnt; i++ {
-			result[i] = make([]*IntPoint, polyCnt)
+			result[i] = make([]IntPoint, polyCnt)
 			for j, ip := range pattern {
-				result[i][j] = &IntPoint{path[i].X + ip.X, path[i].Y + ip.Y}
+				result[i][j].X = path[i].X + ip.X
+				result[i][j].Y = path[i].Y + ip.Y
 			}
 		}
 	} else {
 		for i := 0; i < pathCnt; i++ {
-			result[i] = make([]*IntPoint, polyCnt)
+			result[i] = make([]IntPoint, polyCnt)
 			for j, ip := range pattern {
-				result[i][j] = &IntPoint{path[i].X - ip.X, path[i].Y - ip.Y}
+				result[i][j].X = path[i].X - ip.X
+				result[i][j].Y = path[i].Y - ip.Y
 			}
 		}
 	}
@@ -4243,7 +4246,7 @@ func (c *Clipper) Minkowski(pattern, path Path, IsSum, IsClosed bool) Paths {
 	quads := Paths(make([]Path, 0, (pathCnt+delta)*(polyCnt+1)))
 	for i := 0; i < pathCnt-1+delta; i++ {
 		for j := 0; j < polyCnt; j++ {
-			quad := Path(make([]*IntPoint, 4))
+			quad := Path(make([]IntPoint, 4))
 			quad[0] = result[i%pathCnt][j%polyCnt]
 			quad[1] = result[(i+1)%pathCnt][j%polyCnt]
 			quad[2] = result[(i+1)%pathCnt][(j+1)%polyCnt]
@@ -4270,9 +4273,10 @@ func (c *Clipper) MinkowskiSum(pattern, path Path, pathIsClosed bool) Paths {
 //------------------------------------------------------------------------------
 
 func (c *Clipper) TranslatePath(path Path, delta *IntPoint) Path {
-	outPath := Path(make([]*IntPoint, len(path)))
+	outPath := Path(make([]IntPoint, len(path)))
 	for i := 0; i < len(path); i++ {
-		outPath[i] = &IntPoint{path[i].X + delta.X, path[i].Y + delta.Y}
+		outPath[i].X = path[i].X + delta.X
+		outPath[i].Y = path[i].Y + delta.Y
 	}
 	return outPath
 }
@@ -4286,7 +4290,7 @@ func (c *Clipper) MinkowskiSumAll(pattern Path, paths Paths, pathIsClosed bool) 
 		tmp := c.Minkowski(pattern, paths[i], true, pathIsClosed)
 		c.AddPaths(tmp, PtSubject, true)
 		if pathIsClosed {
-			path := c.TranslatePath(paths[i], pattern[0])
+			path := c.TranslatePath(paths[i], &pattern[0])
 			c.AddPath(path, PtClip, true)
 		}
 	}
@@ -4432,7 +4436,7 @@ func (co *ClipperOffset) AddPath(path Path, joinType JoinType, endType EndType) 
 			highI--
 		}
 	}
-	newNode.m_polygon = Path(make([]*IntPoint, 0, highI+1))
+	newNode.m_polygon = Path(make([]IntPoint, 0, highI+1))
 	newNode.m_polygon = append(newNode.m_polygon, path[0])
 	j := 0
 	k := 0
@@ -4570,14 +4574,14 @@ func (co *ClipperOffset) DoOffset(delta float64) {
 			continue
 		}
 
-		co.m_destPoly = Path(make([]*IntPoint, 0, int(steps)+4))
+		co.m_destPoly = Path(make([]IntPoint, 0, int(steps)+4))
 
 		if length == 1 {
 			if node.m_jointype == JtRound {
 				X := 1.0
 				Y := 0.0
 				for j := 1; j <= int(steps); j++ {
-					co.m_destPoly = append(co.m_destPoly, &IntPoint{
+					co.m_destPoly = append(co.m_destPoly, IntPoint{
 						co.Round(float64(co.m_srcPoly[0].X) + X*delta),
 						co.Round(float64(co.m_srcPoly[0].Y) + Y*delta)})
 					X2 := X
@@ -4588,7 +4592,7 @@ func (co *ClipperOffset) DoOffset(delta float64) {
 				X := -1.0
 				Y := -1.0
 				for j := 0; j < 4; j++ {
-					co.m_destPoly = append(co.m_destPoly, &IntPoint{
+					co.m_destPoly = append(co.m_destPoly, IntPoint{
 						co.Round(float64(co.m_srcPoly[0].X) + X*delta),
 						co.Round(float64(co.m_srcPoly[0].Y) + Y*delta)})
 					if X < 0 {
@@ -4608,12 +4612,12 @@ func (co *ClipperOffset) DoOffset(delta float64) {
 		co.m_normals = make([]*DoublePoint, 0, length)
 		for j := 0; j < length-1; j++ {
 			co.m_normals = append(co.m_normals,
-				co.GetUnitNormal(co.m_srcPoly[j], co.m_srcPoly[j+1]))
+				co.GetUnitNormal(&co.m_srcPoly[j], &co.m_srcPoly[j+1]))
 		}
 		if node.m_endtype == EtClosedLine ||
 			node.m_endtype == EtClosedPolygon {
 			co.m_normals = append(co.m_normals,
-				co.GetUnitNormal(co.m_srcPoly[length-1], co.m_srcPoly[0]))
+				co.GetUnitNormal(&co.m_srcPoly[length-1], &co.m_srcPoly[0]))
 		} else {
 			co.m_normals = append(co.m_normals,
 				CopyDoublePoint(co.m_normals[length-2]))
@@ -4631,7 +4635,7 @@ func (co *ClipperOffset) DoOffset(delta float64) {
 				co.OffsetPoint(j, &k, node.m_jointype)
 			}
 			co.m_destPolys = append(co.m_destPolys, co.m_destPoly)
-			co.m_destPoly = Path(make([]*IntPoint, 0))
+			co.m_destPoly = Path(make([]IntPoint, 0))
 			//re-build m_normals ...
 			n := co.m_normals[length-1]
 			for j := length - 1; j > 0; j-- {
@@ -4656,12 +4660,12 @@ func (co *ClipperOffset) DoOffset(delta float64) {
 					co.m_normals[j].X*delta)),
 					CInt(co.Round(float64(co.m_srcPoly[j].Y) +
 						co.m_normals[j].Y*delta))}
-				co.m_destPoly = append(co.m_destPoly, pt1)
+				co.m_destPoly = append(co.m_destPoly, *pt1)
 				pt1 = &IntPoint{CInt(co.Round(float64(co.m_srcPoly[j].X) -
 					co.m_normals[j].X*delta)),
 					CInt(co.Round(float64(co.m_srcPoly[j].Y) -
 						co.m_normals[j].Y*delta))}
-				co.m_destPoly = append(co.m_destPoly, pt1)
+				co.m_destPoly = append(co.m_destPoly, *pt1)
 			} else {
 				j := length - 1
 				k := length - 2
@@ -4692,12 +4696,12 @@ func (co *ClipperOffset) DoOffset(delta float64) {
 					co.m_normals[0].X*delta)),
 					CInt(co.Round(float64(co.m_srcPoly[0].Y) -
 						co.m_normals[0].Y*delta))}
-				co.m_destPoly = append(co.m_destPoly, pt1)
+				co.m_destPoly = append(co.m_destPoly, *pt1)
 				pt1 = &IntPoint{CInt(co.Round(float64(co.m_srcPoly[0].X) +
 					co.m_normals[0].X*delta)),
 					CInt(co.Round(float64(co.m_srcPoly[0].Y) +
 						co.m_normals[0].Y*delta))}
-				co.m_destPoly = append(co.m_destPoly, pt1)
+				co.m_destPoly = append(co.m_destPoly, *pt1)
 			} else {
 				k = 1
 				co.m_sinA = 0
@@ -4726,12 +4730,12 @@ func (co *ClipperOffset) Execute(delta float64) (solution Paths) {
 			PftPositive, PftPositive)
 	} else {
 		r := GetBounds(co.m_destPolys)
-		outer := Path(make([]*IntPoint, 4))
+		outer := Path(make([]IntPoint, 4))
 
-		outer[0] = &IntPoint{r.left - 10, r.bottom + 10}
-		outer[1] = &IntPoint{r.right + 10, r.bottom + 10}
-		outer[2] = &IntPoint{r.right + 10, r.top - 10}
-		outer[3] = &IntPoint{r.left - 10, r.top - 10}
+		outer[0] = IntPoint{r.left - 10, r.bottom + 10}
+		outer[1] = IntPoint{r.right + 10, r.bottom + 10}
+		outer[2] = IntPoint{r.right + 10, r.top - 10}
+		outer[3] = IntPoint{r.left - 10, r.top - 10}
 
 		clpr.AddPath(outer, PtSubject, true)
 		clpr.ReverseSolution = true
@@ -4758,12 +4762,12 @@ func (co *ClipperOffset) Execute2(delta float64) (solution *PolyTree) {
 			PftPositive, PftPositive)
 	} else {
 		r := GetBounds(co.m_destPolys)
-		outer := Path(make([]*IntPoint, 4))
+		outer := Path(make([]IntPoint, 4))
 
-		outer[0] = &IntPoint{r.left - 10, r.bottom + 10}
-		outer[1] = &IntPoint{r.right + 10, r.bottom + 10}
-		outer[2] = &IntPoint{r.right + 10, r.top - 10}
-		outer[3] = &IntPoint{r.left - 10, r.top - 10}
+		outer[0] = IntPoint{r.left - 10, r.bottom + 10}
+		outer[1] = IntPoint{r.right + 10, r.bottom + 10}
+		outer[2] = IntPoint{r.right + 10, r.top - 10}
+		outer[3] = IntPoint{r.left - 10, r.top - 10}
 
 		clpr.AddPath(outer, PtSubject, true)
 		clpr.ReverseSolution = true
@@ -4793,7 +4797,7 @@ func (co *ClipperOffset) OffsetPoint(j int, k *int, jointype JoinType) {
 		cosA := (co.m_normals[*k].X*co.m_normals[j].X +
 			co.m_normals[j].Y*co.m_normals[*k].Y)
 		if cosA > 0 { // angle ==> 0 degrees {
-			co.m_destPoly = append(co.m_destPoly, &IntPoint{co.Round(
+			co.m_destPoly = append(co.m_destPoly, IntPoint{co.Round(
 				float64(co.m_srcPoly[j].X) + co.m_normals[*k].X*co.m_delta),
 				co.Round(float64(co.m_srcPoly[j].Y) +
 					co.m_normals[*k].Y*co.m_delta)})
@@ -4807,11 +4811,11 @@ func (co *ClipperOffset) OffsetPoint(j int, k *int, jointype JoinType) {
 	}
 
 	if co.m_sinA*co.m_delta < 0 {
-		co.m_destPoly = append(co.m_destPoly, &IntPoint{co.Round(
+		co.m_destPoly = append(co.m_destPoly, IntPoint{co.Round(
 			float64(co.m_srcPoly[j].X) + co.m_normals[*k].X*co.m_delta),
 			co.Round(float64(co.m_srcPoly[j].Y) + co.m_normals[*k].Y*co.m_delta)})
 		co.m_destPoly = append(co.m_destPoly, co.m_srcPoly[j])
-		co.m_destPoly = append(co.m_destPoly, &IntPoint{co.Round(
+		co.m_destPoly = append(co.m_destPoly, IntPoint{co.Round(
 			float64(co.m_srcPoly[j].X) + co.m_normals[j].X*co.m_delta),
 			co.Round(float64(co.m_srcPoly[j].Y) + co.m_normals[j].Y*co.m_delta)})
 	} else {
@@ -4844,12 +4848,12 @@ func (co *ClipperOffset) DoSquare(j, k int) {
 	dx := math.Tan(math.Atan2(co.m_sinA,
 		co.m_normals[k].X*co.m_normals[j].X+
 			co.m_normals[k].Y*co.m_normals[j].Y) / 4)
-	co.m_destPoly = append(co.m_destPoly, &IntPoint{
+	co.m_destPoly = append(co.m_destPoly, IntPoint{
 		co.Round(float64(co.m_srcPoly[j].X) +
 			co.m_delta*(co.m_normals[k].X-co.m_normals[k].Y*dx)),
 		co.Round(float64(co.m_srcPoly[j].Y) +
 			co.m_delta*(co.m_normals[k].Y+co.m_normals[k].X*dx))})
-	co.m_destPoly = append(co.m_destPoly, &IntPoint{
+	co.m_destPoly = append(co.m_destPoly, IntPoint{
 		co.Round(float64(co.m_srcPoly[j].X) +
 			co.m_delta*(co.m_normals[j].X+co.m_normals[j].Y*dx)),
 		co.Round(float64(co.m_srcPoly[j].Y) +
@@ -4860,7 +4864,7 @@ func (co *ClipperOffset) DoSquare(j, k int) {
 
 func (co *ClipperOffset) DoMiter(j, k int, r float64) {
 	q := co.m_delta / r
-	co.m_destPoly = append(co.m_destPoly, &IntPoint{co.Round(
+	co.m_destPoly = append(co.m_destPoly, IntPoint{co.Round(
 		float64(co.m_srcPoly[j].X) + (co.m_normals[k].X+co.m_normals[j].X)*q),
 		co.Round(float64(co.m_srcPoly[j].Y) +
 			(co.m_normals[k].Y+co.m_normals[j].Y)*q)})
@@ -4877,14 +4881,14 @@ func (co *ClipperOffset) DoRound(j, k int) {
 	Y := co.m_normals[k].Y
 	var X2 float64
 	for i := 0; i < steps; i++ {
-		co.m_destPoly = append(co.m_destPoly, &IntPoint{
+		co.m_destPoly = append(co.m_destPoly, IntPoint{
 			co.Round(float64(co.m_srcPoly[j].X) + X*co.m_delta),
 			co.Round(float64(co.m_srcPoly[j].Y) + Y*co.m_delta)})
 		X2 = X
 		X = X*co.m_cos - co.m_sin*Y
 		Y = X2*co.m_sin + Y*co.m_cos
 	}
-	co.m_destPoly = append(co.m_destPoly, &IntPoint{
+	co.m_destPoly = append(co.m_destPoly, IntPoint{
 		co.Round(float64(co.m_srcPoly[j].X) + co.m_normals[j].X*co.m_delta),
 		co.Round(float64(co.m_srcPoly[j].Y) + co.m_normals[j].Y*co.m_delta)})
 }
